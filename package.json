@@ -21,6 +21,10 @@
     "npm": ">=7.0.0",
     "node": ">=14.0.0"
   },
+  "prisma": {
+    "schema": "packages/database/prisma/schema.prisma",
+    "seed": "tsx packages/database/src/seed.ts"
+  },
   "dependencies": {},
   "packageManager": "npm@8.5.1"
 }
