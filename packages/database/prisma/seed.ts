@@ -50,6 +50,40 @@ const userData: Prisma.UserCreateInput[] = [
   },
 ]
 
+// const ChallengeData: Prisma.ChallengeCreateInput[] = [
+//   {
+//     start: new Date('August 19, 2023'),
+//     end: new Date('August 22, 2023'),
+//     moneyStaked: 30.3,
+//     challengeMode: {
+//       create: [
+//         {
+
+//         }
+//       ]
+//     }
+//   }
+// ]
+
+const ChallengeModeData: Prisma.ChallengeModeCreateInput[] = [
+  {
+    challenge: {
+      create: [
+        {
+          start: new Date('August 19, 2023'),
+          end: new Date('August 22, 2023'),
+          moneyStaked: 30.3,
+        },
+        {
+          start: new Date('August 23, 2023'),
+          end: new Date('August 29, 2023'),
+          moneyStaked: 10.3,
+        }
+      ],
+    },
+  },
+]
+
 async function main() {
   console.log(`Start seeding ...`)
   for (const u of userData) {
@@ -57,6 +91,12 @@ async function main() {
       data: u,
     })
     console.log(`Created user with id: ${user.id}`)
+  }
+  for (const m of ChallengeModeData) {
+    const mode = await prisma.challengeMode.create({
+      data: m,
+    });
+    console.log(`created challengeMode with id:${mode.id}`);
   }
   console.log(`Seeding finished.`)
 }

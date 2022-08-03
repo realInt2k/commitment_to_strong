@@ -12,7 +12,7 @@ type Challenge {
 }
 
 type ChallengeMode {
-  challenge: [Challenge]
+  challenges: [Challenge!]!
   id: Int!
 }
 
@@ -51,6 +51,7 @@ input PostOrderByUpdatedAtInput {
 
 type Query {
   allUsers: [User!]!
+  challengeModes: [ChallengeMode]
   draftsByUser(userUniqueInput: UserUniqueInput!): [Post]
   feed(orderBy: PostOrderByUpdatedAtInput, searchString: String, skip: Int, take: Int): [Post!]!
   postById(id: Int): Post

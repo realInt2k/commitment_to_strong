@@ -28,7 +28,7 @@ model Post {
 
 model ChallengeMode {
   id        Int         @id @default(autoincrement())
-  challenge Challenge[]
+  challenges Challenge[]
 }
 
 model Challenge {

@@ -24,6 +24,13 @@ const Query = objectType({
       },
     })
 
+    t.nullable.list.nullable.field('challengeModes', {
+      type: ChallengeMode,
+      resolve: (_parent, _args, context: Context) => {
+        return context.prisma.challengeMode.findMany()
+      },
+    })
+
     t.nullable.field('postById', {
       type: 'Post',
       args: {
@@ -211,12 +218,13 @@ const Challenge = objectType({
     t.nonNull.date('end')
     t.nonNull.float('moneyStaked')
     t.nonNull.field('challengeMode', {
-      type: ChallengeMode,
-      resolve: (parrent, _, context: Context) => {
+      type: 'ChallengeMode',
+      resolve: (parent, _, context: Context) => {
         return context.prisma.challenge
           .findUnique({
             where: {id: parent.id}
-          }).challengeMode;
+          })
+          .challengeMode();
       }
     })
   }
@@ -226,13 +234,14 @@ const ChallengeMode = objectType({
   name: 'ChallengeMode',
   definition(t) {
     t.nonNull.int('id')
-    t.list.field('challenge', {
-      type: Challenge,
+    t.nonNull.list.nonNull.field('challenges', {
+      type: 'Challenge',
       resolve: (parent, _, context: Context) => {
         return context.prisma.challengeMode
           .findUnique({
             where: {id: parent.id || undefined}
-          }).challenge;
+          })
+          .challenges();
       }
     })
   }
