@@ -25,3 +25,17 @@ model Post {
   author    User?    @relation(fields: [authorId], references: [id])
   authorId  Int?
 }
+
+model ChallengeMode {
+  id        Int         @id @default(autoincrement())
+  challenge Challenge[]
+}
+
+model Challenge {
+  id            Int            @id @default(autoincrement())
+  start         DateTime       @default(now())
+  end           DateTime
+  moneyStaked   Float
+  challengeModeId Int
+  challengeMode ChallengeMode? @relation(fields: [challengeModeId], references: [id])
+}

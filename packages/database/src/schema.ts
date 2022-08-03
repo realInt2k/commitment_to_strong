@@ -10,7 +10,7 @@ import {
   enumType,
 } from 'nexus'
 import { DateTimeResolver } from 'graphql-scalars'
-import { Context } from './context'
+import { Context } from './context';
 
 export const DateTime = asNexusMethod(DateTimeResolver, 'date')
 
@@ -202,6 +202,42 @@ const Mutation = objectType({
   },
 })
 
+const Challenge = objectType({
+  name: 'Challenge',
+  description: "challenge created by some user",
+  definition(t) {
+    t.nonNull.int('id')
+    t.nonNull.date('start')
+    t.nonNull.date('end')
+    t.nonNull.float('moneyStaked')
+    t.nonNull.field('challengeMode', {
+      type: ChallengeMode,
+      resolve: (parrent, _, context: Context) => {
+        return context.prisma.challenge
+          .findUnique({
+            where: {id: parent.id}
+          }).challengeMode;
+      }
+    })
+  }
+})
+
+const ChallengeMode = objectType({
+  name: 'ChallengeMode',
+  definition(t) {
+    t.nonNull.int('id')
+    t.list.field('challenge', {
+      type: Challenge,
+      resolve: (parent, _, context: Context) => {
+        return context.prisma.challengeMode
+          .findUnique({
+            where: {id: parent.id || undefined}
+          }).challenge;
+      }
+    })
+  }
+})
+
 const User = objectType({
   name: 'User',
   definition(t) {
@@ -242,6 +278,25 @@ const Post = objectType({
       },
     })
   },
+})
+
+
+const Commmitment = objectType({
+  name: 'Commitment',
+  definition(t) {
+    t.nonNull.int('cId')
+    t.nonNull.field('creator', {
+      type: 'User',
+      resolve: (parent, _, context: Context) => {
+        return context.prisma.user
+          .findUnique({
+            where: {id:parent.id || undefined}
+          })
+      }
+    })
+    t.nonNull.int('skipBurnPolicy')
+    t.nonNull.int('stake')
+  }
 })
 
 const SortOrder = enumType({
@@ -287,6 +342,8 @@ export const schema = makeSchema({
     Mutation,
     Post,
     User,
+    ChallengeMode,
+    Challenge,
     UserUniqueInput,
     UserCreateInput,
     PostCreateInput,
