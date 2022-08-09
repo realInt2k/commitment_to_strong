@@ -3,39 +3,633 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
-model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
-  posts Post[]
+model workerphoneauth {
+  phone String @id @db.VarChar(11)
+  code  String @db.VarChar(6)
+  date  BigInt @db.UnsignedBigInt
 }
 
-model Post {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  viewCount Int      @default(0)
-  author    User?    @relation(fields: [authorId], references: [id])
-  authorId  Int?
+model appversion {
+  idx     Int    @id @default(autoincrement())
+  version String @db.VarChar(5)
 }
 
-model ChallengeMode {
-  id        Int         @id @default(autoincrement())
-  challenges Challenge[]
+model bank {
+  bankCode           String               @id @db.VarChar(3)
+  bankName           String?              @db.VarChar(20)
+  bankaccountauth    bankaccountauth[]
+  partnerbank        partnerbank[]
+  partnervirtualbank partnervirtualbank[]
+  workerbank         workerbank[]
 }
 
-model Challenge {
-  id            Int            @id @default(autoincrement())
-  start         DateTime       @default(now())
-  end           DateTime
-  moneyStaked   Float
-  challengeModeId Int
-  challengeMode ChallengeMode? @relation(fields: [challengeModeId], references: [id])
+model bankaccountauth {
+  bankAccount BigInt @id
+  bankCode    String @db.VarChar(3)
+  authText    String @db.VarChar(6)
+  date        BigInt @db.UnsignedBigInt
+  bank        bank   @relation(fields: [bankCode], references: [bankCode], onUpdate: Restrict, map: "bankAccountAuth_ibfk_1")
+
+  @@index([bankCode], map: "bankAccountAuth_ibfk_1_idx")
+}
+
+model checkweeklist {
+  idx              Int    @default(autoincrement())
+  partnerLicenseId String @db.VarChar(30)
+  weekNumber       Int
+
+  @@id([idx, partnerLicenseId])
+}
+
+model deposit {
+  depositNum         Int         @id @default(autoincrement())
+  klaytnAccount      String      @db.VarChar(42)
+  deposit            Int
+  depositDate        DateTime    @db.DateTime(0)
+  partnerLicenseId   String      @db.VarChar(10)
+  depositType        Boolean
+  virtualBankAccount String      @db.VarChar(14)
+  bankCode           String      @db.VarChar(3)
+  accountHolder      String      @db.VarChar(30)
+  deposittype        deposittype @relation(fields: [depositType], references: [depositType], onDelete: NoAction, onUpdate: NoAction, map: "deposit_ibfk_2")
+
+  @@index([depositType], map: "depositType")
+  @@index([partnerLicenseId], map: "partnerLicenseId")
+}
+
+model deposittype {
+  depositType Boolean   @id
+  deposit     deposit[]
+}
+
+model faq {
+  faqId       Int    @id @default(autoincrement())
+  faqTitle    String @db.VarChar(50)
+  faqReply    String @db.MediumText
+  faqCategory Int    @db.TinyInt
+}
+
+model guidetexts {
+  IDX   Int     @id @default(autoincrement())
+  TITLE String? @db.VarChar(45)
+}
+
+model invoice {
+  partnerLicenseId  String   @db.VarChar(10)
+  yearMonth         DateTime @db.Date
+  sendingDate       DateTime @db.Date
+  checkSendEmail    Boolean  @default(false)
+  adminName         String   @db.VarChar(30)
+  outgoingEmail     String   @db.VarChar(100)
+  lastMonthDept     Int?
+  monthlyThankspay  Int
+  monthlyServiceFee Int
+  serviceFeeRate    Float    @default(2.5) @db.Float
+
+  @@id([partnerLicenseId, yearMonth])
+}
+
+model invoicebyworker {
+  workerEmail      String   @db.VarChar(10)
+  yearMonth        DateTime @db.Date
+  bankAccount      String   @db.VarChar(14)
+  bankCode         String   @db.VarChar(3)
+  bankAccountOwner String   @db.VarChar(30)
+  isCashReceipt    Boolean
+  worker           worker   @relation(fields: [workerEmail], references: [workerEmail], onDelete: NoAction, onUpdate: NoAction, map: "invoiceByWorker_ibfk_1")
+
+  @@id([workerEmail, yearMonth])
+}
+
+model klaytntxlog {
+  txIndex    Int     @id @default(autoincrement())
+  txBlockNum BigInt
+  txHash     String  @db.VarChar(100)
+  txSender   String  @db.VarChar(42)
+  tag        String? @db.VarChar(10)
+}
+
+model ksnethistory {
+  idx           Int       @default(autoincrement())
+  workerEmail   String    @db.VarChar(100)
+  advancedPay   Int
+  depositAmount Int?      @default(0)
+  payReqDate    Int
+  payWeek       Int
+  crea_dt       DateTime? @db.DateTime(0)
+  payState      Int?
+  sendState     Int       @db.TinyInt
+
+  @@id([idx, workerEmail])
+}
+
+model leavepartner {
+  partnerLicenseId            String   @id @db.VarChar(10)
+  partnerLicenseFile          Bytes    @db.MediumBlob
+  klaytnAccount               String   @db.VarChar(42)
+  partnerCEO                  String   @db.VarChar(30)
+  partnerName                 String   @db.VarChar(30)
+  partnerAddress              String   @db.VarChar(30)
+  partnerAddressDetails       String   @db.VarChar(30)
+  partnerSector               String   @db.VarChar(30)
+  partnerCategory             String   @db.VarChar(30)
+  partnerType                 Int      @db.TinyInt
+  salaryDay                   String   @db.VarChar(2)
+  initialDeposit              Int
+  initialDepositDate          String?  @db.VarChar(2)
+  isBlock                     Boolean  @default(false)
+  isBan                       Boolean  @default(false)
+  partnershipContractFile     Bytes?   @db.MediumBlob
+  performanceBondFile         Bytes?   @db.MediumBlob
+  depositType                 Boolean
+  overdueDate                 DateTime @default(dbgenerated("'9999-12-31 11:59:59'")) @db.DateTime(0)
+  partnerPhone                String   @db.VarChar(11)
+  isApproved                  Boolean  @default(false)
+  managerEmail                String   @db.VarChar(100)
+  signUpDate                  DateTime @db.DateTime(0)
+  performanceBondFee          Int?
+  partnershipContractFileName String?  @db.VarChar(100)
+  performanceBondFileName     String?  @db.VarChar(100)
+  partnerLicenseFileName      String   @db.VarChar(100)
+  isAutoTransfer              Boolean?
+  isAutoTransferFile          Bytes?   @db.MediumBlob
+  isAutoTransferFileName      String?  @db.VarChar(100)
+  bankAccount                 String   @db.VarChar(14)
+  bankAccountOwner            String   @db.VarChar(30)
+  bankCode                    String   @db.VarChar(3)
+  copyOfBankBookFile          Bytes    @db.MediumBlob
+  copyOfBankBookFileName      String   @db.VarChar(100)
+  virtualBankAccount          String?  @db.VarChar(14)
+  virtualAccountBankCode      String?  @db.VarChar(3)
+  virtualAccountHolder        String?  @db.VarChar(100)
+  virtualAccountBankName      String?  @db.VarChar(20)
+  leaveDate                   DateTime @db.DateTime(0)
+  managerName                 String   @db.VarChar(30)
+  managerPhone                String   @db.VarChar(11)
+  partnerBankName             String   @db.VarChar(20)
+  deleteDate                  BigInt   @db.UnsignedBigInt
+}
+
+model leaveworker {
+  workerEmail          String    @id @db.VarChar(100)
+  klaytnAccount        String    @db.VarChar(42)
+  workerName           String    @db.VarChar(30)
+  workerPhone          String    @db.VarChar(11)
+  workerBirth          Int
+  workerGender         String    @db.VarChar(1)
+  workType             Int       @db.TinyInt
+  workerSalary         Int
+  isBlackWorker        Boolean
+  isEmployee           Boolean
+  employeeAuthDate     DateTime  @db.DateTime(0)
+  partnerLicenseId     String?   @db.VarChar(10)
+  signUpDate           DateTime  @db.DateTime(0)
+  workerSalaryDay      Int       @db.TinyInt
+  isCashReceipt        Boolean
+  enteredWorkerSalary  Int?
+  entryDate            DateTime? @db.DateTime(0)
+  isUsedSimplePassword Boolean
+  failureCount         Int?      @db.TinyInt
+  leaveDate            DateTime  @db.DateTime(0)
+  optionalTerms        String?   @db.VarChar(100)
+  bankCode             String    @db.VarChar(3)
+  bankAccount          String    @db.VarChar(14)
+  bankAccountOwner     String    @db.VarChar(30)
+  bankName             String    @db.VarChar(10)
+  deleteDate           BigInt    @db.UnsignedBigInt
+  isAgreeServiceTerms  Boolean
+}
+
+model managingpartnerapprove {
+  partnerLicenseId String    @db.VarChar(10)
+  reqApproveDate   DateTime? @db.DateTime(0)
+  isApproved       Boolean   @default(false)
+  who              String    @db.VarChar(100)
+  date             DateTime  @db.DateTime(0)
+  rejectReason     String?   @db.VarChar(50)
+  partner          partner   @relation(fields: [partnerLicenseId], references: [partnerLicenseId], onDelete: NoAction, onUpdate: NoAction, map: "managingPartnerApprove_ibfk_1")
+
+  @@id([partnerLicenseId, date])
+}
+
+model monthlydeposit {
+  partnerLicenseId       String   @db.VarChar(10)
+  yearMonth              DateTime @db.Date
+  isReturning            Boolean
+  isAutoTransfer         Boolean
+  virtualAccountBankCode String   @db.VarChar(3)
+  virtualAccount         String   @db.VarChar(14)
+  actualPay              Int
+  deposit                Int
+  depositUtilization     Int      @db.TinyInt
+  depositDebt            Int
+  serviceFeeDebt         Int
+  partner                partner  @relation(fields: [partnerLicenseId], references: [partnerLicenseId], onDelete: NoAction, onUpdate: NoAction, map: "monthlyDeposit_ibfk_1")
+
+  @@id([partnerLicenseId, yearMonth])
+}
+
+model monthlypartner {
+  partnerLicenseId        String   @db.VarChar(10)
+  yearMonth               DateTime @db.Date
+  partnerName             String   @db.VarChar(30)
+  partnerState            String   @db.VarChar(10)
+  partnerType             Int      @db.TinyInt
+  partnerClosingDay       Int      @db.TinyInt
+  workerCount             Int
+  thanksPayCountByPartner Int
+  partnerMonthlyThanksPay Int
+  serviceFeeRate          Float    @default(2.5) @db.Float
+  monthlyDepositBalance   Int?
+  monthlyDepositCount     Int      @db.TinyInt
+  isAutoTransfer          Boolean?
+  virtualAccountBankCode  String   @db.VarChar(3)
+  virtualAccount          String   @db.VarChar(14)
+  addDeposit              Int
+  monthlyDeposit          Int?
+  depositUtilization      Int?     @db.TinyInt
+  checkSendEmail          Int
+  sendEmailDate           DateTime @db.DateTime(0)
+  managerName             String   @db.VarChar(50)
+  managerEmail            String   @db.VarChar(100)
+  initialDeposit          Int
+  outgoingEmail           String   @db.VarChar(100)
+  adminName               String   @db.VarChar(100)
+  salaryDay               Int      @db.TinyInt
+  bankAccount             String   @db.VarChar(14)
+  bankCode                String   @db.VarChar(3)
+  bankAccountOwner        String   @db.VarChar(30)
+  isAutoTransferFile      Bytes?   @db.MediumBlob
+  isAutoTransferFileName  String?  @db.VarChar(100)
+  virtualAccountHolder    String   @db.VarChar(100)
+
+  @@id([partnerLicenseId, yearMonth])
+}
+
+model monthlypartnerstate {
+  partnerLicenseId String  @db.VarChar(10)
+  yearMonth        String  @db.VarChar(6)
+  partnerState     String  @db.VarChar(6)
+  initialDeposit   Int
+  salaryDay        Int     @db.TinyInt
+  partner          partner @relation(fields: [partnerLicenseId], references: [partnerLicenseId], onDelete: NoAction, onUpdate: NoAction, map: "monthlyPartnerState_ibfk_1")
+
+  @@id([partnerLicenseId, yearMonth])
+}
+
+model monthlythankspay {
+  partnerLicenseId String   @db.VarChar(10)
+  yearMonth        DateTime @db.Date
+  monthlyThanksPay Int
+  salaryDay        Int      @db.TinyInt
+  realAmount       Int      @default(0)
+  monthlyDept      Int
+  initialDeposit   Int
+
+  @@id([partnerLicenseId, yearMonth])
+}
+
+model monthlyworker {
+  workerEmail            String   @db.VarChar(100)
+  yearMonth              DateTime @db.Date
+  workerName             String   @db.VarChar(30)
+  workerPhone            String   @db.VarChar(11)
+  workType               Int      @db.TinyInt
+  isEmployee             Boolean
+  workerBankCode         String   @db.VarChar(3)
+  workerBankAccount      String   @db.VarChar(14)
+  workerIsAgreeMarketing Boolean
+  isBlackWorker          Boolean
+  partnerLicenseId       String   @db.VarChar(10)
+  partnerName            String   @db.VarChar(30)
+  workerBirth            String   @db.VarChar(6)
+
+  @@id([workerEmail, yearMonth])
+}
+
+model partner {
+  partnerLicenseId            String                   @id @db.VarChar(10)
+  klaytnAccount               String                   @db.VarChar(42)
+  partnerCEO                  String                   @db.VarChar(30)
+  partnerName                 String                   @db.VarChar(50)
+  partnerAddress              String                   @db.VarChar(30)
+  partnerAddressDetails       String                   @db.VarChar(30)
+  partnerSector               String                   @db.VarChar(30)
+  partnerCategory             String                   @db.VarChar(30)
+  partnerType                 Int                      @db.TinyInt
+  salaryDay                   String                   @db.VarChar(2)
+  initialDeposit              Int
+  initialDepositDate          String?                  @db.VarChar(2)
+  isBlock                     Boolean                  @default(false)
+  isBan                       Boolean                  @default(false)
+  partnershipContractFile     Bytes?                   @db.MediumBlob
+  performanceBondFile         Bytes?                   @db.MediumBlob
+  depositType                 Boolean
+  overdueDate                 DateTime                 @default(dbgenerated("'9999-12-31 11:59:59'")) @db.DateTime(0)
+  partnerPhone                String                   @db.VarChar(11)
+  isApproved                  Boolean                  @default(true)
+  managerEmail                String                   @db.VarChar(100)
+  signUpDate                  DateTime                 @default(now()) @db.DateTime(0)
+  performanceBondFee          Int?
+  partnershipContractFileName String?                  @db.VarChar(100)
+  performanceBondFileName     String?                  @db.VarChar(100)
+  partnerLicenseFileName      String                   @db.VarChar(100)
+  isAutoTransfer              Boolean?
+  isAutoTransferFile          Bytes?                   @db.MediumBlob
+  isAutoTransferFileName      String?                  @db.VarChar(100)
+  block                       String?                  @db.VarChar(10)
+  sendMail                    Int                      @default(0) @db.TinyInt
+  partnerLicenseFile          Bytes                    @db.MediumBlob
+  depositState                Int?                     @default(0) @db.TinyInt
+  managingpartnerapprove      managingpartnerapprove[]
+  monthlydeposit              monthlydeposit[]
+  monthlypartnerstate         monthlypartnerstate[]
+  partnerbank                 partnerbank?
+  partnermanager              partnermanager[]
+  partnervirtualbank          partnervirtualbank?
+}
+
+model partnerbank {
+  bankAccount            String  @db.VarChar(14)
+  bankAccountOwner       String  @db.VarChar(30)
+  partnerLicenseId       String  @id @db.VarChar(10)
+  bankCode               String  @db.VarChar(3)
+  copyOfBankBookFile     Bytes   @db.MediumBlob
+  copyOfBankBookFileName String  @db.VarChar(100)
+  bank                   bank    @relation(fields: [bankCode], references: [bankCode], onDelete: NoAction, onUpdate: NoAction, map: "partnerBank_ibfk_2")
+  partner                partner @relation(fields: [partnerLicenseId], references: [partnerLicenseId], onDelete: NoAction, onUpdate: NoAction, map: "partnerBank_ibfk_3")
+
+  @@index([bankCode], map: "bankCode")
+}
+
+model partnerdepositalram {
+  idx         Int       @default(autoincrement())
+  partner     String    @db.VarChar(10)
+  workeremail String    @db.VarChar(20)
+  workername  String?   @db.VarChar(5)
+  creat_dt    DateTime? @default(now()) @db.DateTime(0)
+  status      Int?      @default(1) @db.TinyInt
+
+  @@id([idx, workeremail])
+}
+
+model partneremailauth {
+  email String @id @db.VarChar(100)
+  code  String @db.VarChar(10)
+  date  BigInt @db.UnsignedBigInt
+}
+
+model partnermanager {
+  managerEmail            String                    @id @db.VarChar(100)
+  managerPw               String                    @db.VarChar(255)
+  managerName             String                    @db.VarChar(30)
+  managerPhone            String                    @db.VarChar(11)
+  managerPosition         String?                   @db.VarChar(10)
+  partnerLicenseId        String?                   @db.VarChar(10)
+  initialDeposit          Int
+  salaryDay               String                    @db.VarChar(2)
+  authDate                DateTime?                 @db.DateTime(0)
+  isEmailAuth             Boolean                   @default(false)
+  signUpDate              DateTime                  @default(now()) @db.DateTime(0)
+  partner                 partner?                  @relation(fields: [partnerLicenseId], references: [partnerLicenseId], onDelete: Cascade, onUpdate: NoAction, map: "partnerManager_ibfk_1")
+  terms_agreement_partner terms_agreement_partner[]
+
+  @@index([partnerLicenseId], map: "partnerLicenseId")
+}
+
+model partneroverdue {
+  partnerLicenseId String    @db.VarChar(10)
+  yearMonth        String    @db.VarChar(6)
+  startOverdueDate DateTime  @db.DateTime(0)
+  endOverdueDate   DateTime? @db.DateTime(0)
+  overdueState     String    @default("ING") @db.VarChar(3)
+
+  @@id([partnerLicenseId, yearMonth])
+}
+
+model partnervirtualbank {
+  virtualBankAccount     String  @db.VarChar(14)
+  virtualAccountBankCode String  @db.VarChar(3)
+  partnerLicenseId       String  @id @db.VarChar(10)
+  virtualAccountHolder   String  @db.VarChar(100)
+  partner                partner @relation(fields: [partnerLicenseId], references: [partnerLicenseId], onDelete: Cascade, onUpdate: NoAction, map: "partnerVirtualBank_ibfk_1")
+  bank                   bank    @relation(fields: [virtualAccountBankCode], references: [bankCode], onDelete: NoAction, onUpdate: NoAction, map: "partnerVirtualBank_ibfk_2")
+
+  @@index([virtualAccountBankCode], map: "virtualAccountBankCode")
+}
+
+model paymentlist {
+  IDX         Int      @default(autoincrement())
+  workeremail String   @db.VarChar(20)
+  workername  String   @db.VarChar(6)
+  weeknumber  Int?
+  title       String?  @db.VarChar(10)
+  creat_dt    DateTime @db.DateTime(0)
+  advancedPay Int?
+
+  @@id([IDX, workeremail])
+}
+
+model planlist {
+  idx         Int      @default(autoincrement())
+  workerEmail String   @db.VarChar(100)
+  weeklyDate  Int?     @default(0)
+  monthDate   Int?     @default(0)
+  insertState Int      @default(0) @db.TinyInt
+  crea_dt     DateTime @db.DateTime(0)
+
+  @@id([idx, workerEmail])
+}
+
+model planmonth {
+  idx         Int       @default(autoincrement())
+  workerEmail String    @db.VarChar(100)
+  monthDate   Int?
+  crea_dt     DateTime? @db.DateTime(0)
+
+  @@id([idx, workerEmail])
+}
+
+model planweek {
+  idx         Int       @default(autoincrement())
+  workerEmail String    @db.VarChar(100)
+  weeklyDate  Int?
+  crea_dt     DateTime? @db.DateTime(0)
+
+  @@id([idx, workerEmail])
+}
+
+model pushalaram {
+  IDX        Int       @id @default(autoincrement())
+  TITLE      String    @db.VarChar(45)
+  CONTENTS   String    @db.VarChar(100)
+  VER        String?   @db.VarChar(30)
+  SENDSTATUS Int       @db.TinyInt
+  CREAT_DT   DateTime? @db.DateTime(0)
+}
+
+model pushtest {
+  idx      Int    @id @default(autoincrement())
+  workerid String @db.VarChar(45)
+  token    String @db.VarChar(200)
+}
+
+model qna {
+  qnaId             Int       @id @default(autoincrement())
+  qnaCategory       Int       @db.TinyInt
+  qnaTitle          String    @db.VarChar(50)
+  qnaContent        String    @db.MediumText
+  isSecret          Boolean   @default(false)
+  qnaSecret         String?   @db.VarChar(4)
+  qnaDatetime       DateTime  @db.DateTime(0)
+  qnaReplyContent   String?   @db.MediumText
+  qnaReplyDate      DateTime? @db.DateTime(0)
+  qnaReplyManagerId String?   @db.VarChar(100)
+  userEmail         String    @db.VarChar(100)
+}
+
+model refreshtoken_admin {
+  tokenIndex   String @id @db.VarChar(64)
+  email        String @db.VarChar(100)
+  refreshToken String @db.VarChar(255)
+}
+
+model refreshtoken_partner {
+  tokenIndex   String @id @db.VarChar(64)
+  email        String @db.VarChar(100)
+  refreshToken String @db.VarChar(255)
+
+  @@index([email], map: "email")
+}
+
+model simplepassword {
+  workerEmail    String @id @db.VarChar(100)
+  simplePassword String @db.VarChar(255)
+  failureCount   Int    @default(0) @db.TinyInt
+  worker         worker @relation(fields: [workerEmail], references: [workerEmail], onDelete: NoAction, onUpdate: NoAction, map: "simplePassword_ibfk_1")
+}
+
+model terms {
+  termsCode    Int       @id @default(autoincrement())
+  termsName    String    @db.VarChar(20)
+  termsContent String    @db.LongText
+  required     Boolean
+  termsFlag    Int       @db.TinyInt
+  registerId   String    @default("관리자") @db.VarChar(50)
+  registerDate DateTime  @default(now()) @db.DateTime(0)
+  applyDate    DateTime? @db.DateTime(0)
+  isUsed       Boolean
+  modiDate     DateTime? @db.DateTime(0)
+  modiId       String?   @db.VarChar(100)
+}
+
+model terms_agreement_partner {
+  termsCode      String         @db.VarChar(100)
+  managerEmail   String         @db.VarChar(100)
+  agreeDate      DateTime       @default(now()) @db.DateTime(0)
+  isAgree        Boolean
+  partnermanager partnermanager @relation(fields: [managerEmail], references: [managerEmail], onDelete: NoAction, onUpdate: NoAction, map: "terms_agreement_partner_ibfk_1")
+
+  @@id([termsCode, managerEmail])
+  @@index([managerEmail], map: "managerEmail")
+}
+
+model terms_agreement_worker {
+  termsCode   Int      @db.TinyInt
+  workerEmail String   @db.VarChar(100)
+  agreeDate   DateTime @db.DateTime(0)
+  isAgree     Boolean  @default(false)
+
+  @@id([termsCode, workerEmail])
+}
+
+model thankspay {
+  thanksPayNum         Int       @id @default(autoincrement())
+  klaytnAccount        String    @db.VarChar(42)
+  advancedPay          Int
+  thanksPayState       Int       @db.TinyInt
+  thanksPayDate        DateTime  @default(dbgenerated("'9999-12-31 11:59:59'")) @db.DateTime(0)
+  thanksPayRequestDate DateTime  @db.DateTime(0)
+  deductionCharge      Float     @default(0.025) @db.Float
+  deductedAmount       Int       @default(0)
+  deducationDate       DateTime  @default(dbgenerated("'1000-01-01 00:00:00'")) @db.DateTime(0)
+  deductionPartner     String    @default("") @db.VarChar(30)
+  thanksPayType        Boolean   @default(false)
+  workerEmail          String    @db.VarChar(100)
+  partnerLicenseId     String    @db.VarChar(10)
+  workerName           String    @db.VarChar(30)
+  workerPhone          String    @db.VarChar(11)
+  workerBirth          String    @db.VarChar(6)
+  cancelDate           DateTime? @db.DateTime(0)
+  yearMonth            String    @db.VarChar(9)
+  isBlackWorker        Boolean
+  isEmployee           Boolean
+  partnerName          String    @db.VarChar(30)
+  bankAccount          String    @db.VarChar(14)
+  bankName             String    @db.VarChar(20)
+
+  @@index([partnerLicenseId], map: "partnerLicenseId")
+  @@index([thanksPayType], map: "thanksPayType")
+  @@index([workerEmail], map: "workerEmail")
+}
+
+model thankspaytype {
+  thanksPayType Boolean @id
+}
+
+model wishpartners {
+  workerEmail          String @id @db.VarChar(100)
+  workerPhone          String @db.VarChar(42)
+  temporaryPartnerName String @db.VarChar(30)
+}
+
+model worker {
+  workerEmail          String            @id @db.VarChar(100)
+  klaytnAccount        String            @db.VarChar(42)
+  workerName           String            @db.VarChar(30)
+  workerPhone          String            @db.VarChar(11)
+  workerBirth          String            @db.VarChar(6)
+  workerGender         String            @db.VarChar(1)
+  workType             Int               @db.TinyInt
+  workerSalary         Int
+  isBlackWorker        Boolean           @default(false)
+  isEmployee           Boolean
+  employeeAuthDate     DateTime          @db.DateTime(0)
+  partnerLicenseId     String?           @db.VarChar(10)
+  signUpDate           DateTime          @db.DateTime(0)
+  workerSalaryDay      Int               @db.TinyInt
+  isCashReceipt        Boolean           @default(false)
+  enteredWorkerSalary  Int?
+  entryDate            DateTime?         @db.DateTime(0)
+  isUsedSimplePassword Boolean           @default(false)
+  blackState           Int               @db.TinyInt
+  weeknumber           String?           @db.VarChar(2)
+  planState            Int?
+  invoicebyworker      invoicebyworker[]
+  simplepassword       simplepassword?
+
+  @@index([partnerLicenseId], map: "partnerLicenseId")
+}
+
+model workerbank {
+  bankAccount      String @db.VarChar(14)
+  bankAccountOwner String @db.VarChar(30)
+  workerEmail      String @id @db.VarChar(100)
+  bankCode         String @db.VarChar(3)
+  bank             bank   @relation(fields: [bankCode], references: [bankCode], onDelete: NoAction, onUpdate: NoAction, map: "workerBank_ibfk_1")
+
+  @@index([bankCode], map: "bankCode")
+}
+
+model workerdevicetoken {
+  idx         Int      @default(autoincrement())
+  workerEmail String   @db.VarChar(30)
+  devicetoken String   @db.VarChar(200)
+  creat_dt    DateTime @db.DateTime(0)
+
+  @@id([idx, workerEmail])
 }

@@ -1,9 +1,9 @@
 import { ApolloServer } from 'apollo-server'
-import { schema } from './schema'
+import { schemaThanks_db } from './schemaThanks_db'
 import { context } from './context'
 
 const server = new ApolloServer({
-  schema: schema,
+  schema: schemaThanks_db,
   context: context,
 });
 

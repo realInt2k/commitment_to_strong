@@ -10,7 +10,7 @@ import {
   enumType,
 } from 'nexus'
 import { DateTimeResolver } from 'graphql-scalars'
-import { Context } from './context';
+import { Context } from './context'
 
 export const DateTime = asNexusMethod(DateTimeResolver, 'date')
 
@@ -28,6 +28,33 @@ const Query = objectType({
       type: ChallengeMode,
       resolve: (_parent, _args, context: Context) => {
         return context.prisma.challengeMode.findMany()
+      },
+    })
+
+    t.nullable.list.nullable.field('challenges', {
+      type: Challenge,
+      // an argument of type ChallengeOrderAtInput, with name "orderBy"
+      args: {
+        orderBy: arg({
+          type: ChallengeOrderAtInput,
+        }),
+      },
+      resolve: (_parent, args, context: Context) => {
+        if (args.orderBy) {
+          console.log('args.orderBy: ', Object.keys(args.orderBy))
+          let arrOrderBy: any = []
+          for (const i in Object.keys(args.orderBy)) {
+            let obj: any = {}
+            obj[Object.keys(args.orderBy)[i]] = Object.values(args.orderBy)[i]
+            arrOrderBy.push(obj)
+          }
+          console.log('arr is: ', arrOrderBy)
+          return context.prisma.challenge.findMany({
+            orderBy: arrOrderBy,
+          })
+        } else {
+          return context.prisma.challenge.findMany()
+        }
       },
     })
 
@@ -211,23 +238,23 @@ const Mutation = objectType({
 
 const Challenge = objectType({
   name: 'Challenge',
-  description: "challenge created by some user",
+  description: 'challenge created by some user',
   definition(t) {
     t.nonNull.int('id')
     t.nonNull.date('start')
     t.nonNull.date('end')
     t.nonNull.float('moneyStaked')
-    t.nonNull.field('challengeMode', {
+    t.field('challengeMode', {
       type: 'ChallengeMode',
       resolve: (parent, _, context: Context) => {
         return context.prisma.challenge
           .findUnique({
-            where: {id: parent.id}
+            where: { id: parent.id },
           })
-          .challengeMode();
-      }
+          .challengeMode()
+      },
     })
-  }
+  },
 })
 
 const ChallengeMode = objectType({
@@ -239,12 +266,12 @@ const ChallengeMode = objectType({
       resolve: (parent, _, context: Context) => {
         return context.prisma.challengeMode
           .findUnique({
-            where: {id: parent.id || undefined}
+            where: { id: parent.id || undefined },
           })
-          .challenges();
-      }
+          .challenges()
+      },
     })
-  }
+  },
 })
 
 const User = objectType({
@@ -289,7 +316,6 @@ const Post = objectType({
   },
 })
 
-
 const Commmitment = objectType({
   name: 'Commitment',
   definition(t) {
@@ -297,20 +323,44 @@ const Commmitment = objectType({
     t.nonNull.field('creator', {
       type: 'User',
       resolve: (parent, _, context: Context) => {
-        return context.prisma.user
-          .findUnique({
-            where: {id:parent.id || undefined}
-          })
-      }
+        return context.prisma.user.findUnique({
+          where: { id: parent.id || undefined },
+        })
+      },
     })
     t.nonNull.int('skipBurnPolicy')
     t.nonNull.int('stake')
-  }
+  },
 })
 
 const SortOrder = enumType({
   name: 'SortOrder',
   members: ['asc', 'desc'],
+})
+
+const QueryChallengeOrderAtInput = objectType({
+  name: 'QueryChallengeOrderAtInput',
+  definition(t) {
+    t.nullable.field('moneyStaked', {
+      type: SortOrder,
+    })
+    t.nullable.field('id', {
+      type: SortOrder,
+    })
+  },
+})
+
+// a type that accepts a variable of type SortOrder, with name "moneyStaked"
+const ChallengeOrderAtInput = inputObjectType({
+  name: 'ChallengeOrderAtInput',
+  definition(t) {
+    t.nullable.field('moneyStaked', {
+      type: SortOrder,
+    })
+    t.nullable.field('id', {
+      type: SortOrder,
+    })
+  },
 })
 
 const PostOrderByUpdatedAtInput = inputObjectType({
@@ -362,7 +412,7 @@ export const schema = makeSchema({
   ],
   outputs: {
     schema: __dirname + '/../schema.graphql',
-    typegen: __dirname + '/generated/nexus.ts', 
+    typegen: __dirname + '/generated/nexus.ts',
   },
   contextType: {
     module: require.resolve('./context'),
